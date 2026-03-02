@@ -2,26 +2,37 @@
 Tushare 数据源适配器
 """
 import tushare as ts
+import tushare.pro.client as client
 import pandas as pd
 from typing import Optional
 from .base_adapter import DataSourceAdapter
 from ...utils.logger import logger
+from ...utils.config import settings
 
 
 class TushareAdapter(DataSourceAdapter):
     """Tushare 数据源适配器"""
 
-    def __init__(self, token: str):
+    def __init__(self, token: str, api_url: Optional[str] = None):
         """
         初始化 Tushare 适配器
 
         Args:
             token: Tushare API Token
+            api_url: Tushare API URL（可选，用于第三方镜像）
         """
         self.token = token
-        ts.set_token(token)
-        self.pro = ts.pro_api()
-        logger.info("Tushare 适配器初始化成功")
+        self.api_url = api_url or getattr(settings, 'TUSHARE_API_URL', None)
+
+        # 设置自定义 API URL（用于第三方镜像）
+        if self.api_url:
+            # 注意：必须在 ts.pro_api() 之前设置
+            client.DataApi._DataApi__http_url = self.api_url
+            logger.info(f"使用自定义 Tushare API URL: {self.api_url}")
+
+        # 初始化 pro_api
+        self.pro = ts.pro_api(token)
+        logger.info(f"Tushare 适配器初始化成功")
 
     def get_daily_data(
         self,

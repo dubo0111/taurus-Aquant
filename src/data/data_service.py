@@ -6,6 +6,7 @@ from typing import Optional, Dict
 from pathlib import Path
 import json
 from .adapters.tushare_adapter import TushareAdapter
+from .adapters.akshare_adapter import AkShareAdapter
 from ..utils.logger import logger
 from ..utils.config import settings
 
@@ -13,17 +14,28 @@ from ..utils.config import settings
 class DataService:
     """数据服务主类"""
 
-    def __init__(self, adapter: Optional[TushareAdapter] = None):
+    def __init__(self, adapter: Optional[object] = None):
         """
         初始化数据服务
 
         Args:
-            adapter: 数据源适配器，如果为 None 则使用 Tushare
+            adapter: 数据源适配器，如果为 None 则自动选择
         """
         if adapter is None:
-            if not settings.TUSHARE_TOKEN:
-                raise ValueError("TUSHARE_TOKEN 未配置")
-            self.adapter = TushareAdapter(settings.TUSHARE_TOKEN)
+            # 优先使用 Tushare（如果配置了 Token），否则使用 AkShare
+            if settings.TUSHARE_TOKEN and settings.TUSHARE_TOKEN != "your_tushare_token_here":
+                try:
+                    # 传递 API URL（如果有配置）
+                    api_url = getattr(settings, 'TUSHARE_API_URL', None)
+                    self.adapter = TushareAdapter(settings.TUSHARE_TOKEN, api_url)
+                    logger.info("使用 Tushare 数据源")
+                except Exception as e:
+                    logger.warning(f"Tushare 初始化失败，切换到 AkShare: {e}")
+                    self.adapter = AkShareAdapter()
+                    logger.info("使用 AkShare 数据源（免费）")
+            else:
+                self.adapter = AkShareAdapter()
+                logger.info("使用 AkShare 数据源（免费）")
         else:
             self.adapter = adapter
 

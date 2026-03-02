@@ -19,6 +19,7 @@ class Settings:
 
         # Tushare 配置
         self.TUSHARE_TOKEN = os.getenv("TUSHARE_TOKEN", "")
+        self.TUSHARE_API_URL = os.getenv("TUSHARE_API_URL", "http://tushare.xyz")
 
         # LLM 提供商配置
         self.LLM_PROVIDER = os.getenv("LLM_PROVIDER", "zhipu")
@@ -79,8 +80,20 @@ class Settings:
 
     def _load_env_file(self):
         """从 .env 文件加载环境变量"""
-        env_file = Path(".env")
-        if env_file.exists():
+        # 尝试多个可能的路径
+        possible_paths = [
+            Path(".env"),
+            Path.cwd() / ".env",
+            Path(__file__).parent.parent.parent.parent / ".env"
+        ]
+
+        env_file = None
+        for path in possible_paths:
+            if path.exists():
+                env_file = path
+                break
+
+        if env_file and env_file.exists():
             with open(env_file, 'r', encoding='utf-8') as f:
                 for line in f:
                     line = line.strip()
@@ -88,9 +101,8 @@ class Settings:
                         key, value = line.split('=', 1)
                         key = key.strip()
                         value = value.strip()
-                        # 只有当环境变量不存在时才设置
-                        if key not in os.environ:
-                            os.environ[key] = value
+                        # 直接设置到 os.environ（不检查是否已存在）
+                        os.environ[key] = value
 
     @property
     def database_url(self) -> str:

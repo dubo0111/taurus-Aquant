@@ -11,6 +11,9 @@ class Settings:
 
     def __init__(self):
         """从环境变量加载配置"""
+        # 先加载 .env 文件
+        self._load_env_file()
+
         # 应用基础配置
         self.APP_NAME = os.getenv("APP_NAME", "Taurus-AQuant")
         self.APP_VERSION = os.getenv("APP_VERSION", "0.1.0")
@@ -64,19 +67,6 @@ class Settings:
         self.RISK_MAX_DAILY_TRADES = int(os.getenv("RISK_MAX_DAILY_TRADES", "10"))
         self.RISK_STOP_LOSS_PCT = float(os.getenv("RISK_STOP_LOSS_PCT", "-0.05"))
         self.RISK_STOP_PROFIT_PCT = float(os.getenv("RISK_STOP_PROFIT_PCT", "0.10"))
-
-        # 数据配置
-        self.DATA_CACHE_DIR = os.getenv("DATA_CACHE_DIR", "./data/cache")
-        self.DATA_UPDATE_TIME = os.getenv("DATA_UPDATE_TIME", "18:00")
-
-        # 风控配置
-        self.RISK_MAX_POSITION_PCT = float(os.getenv("RISK_MAX_POSITION_PCT", "0.3"))
-        self.RISK_MAX_DAILY_TRADES = int(os.getenv("RISK_MAX_DAILY_TRADES", "10"))
-        self.RISK_STOP_LOSS_PCT = float(os.getenv("RISK_STOP_LOSS_PCT", "-0.05"))
-        self.RISK_STOP_PROFIT_PCT = float(os.getenv("RISK_STOP_PROFIT_PCT", "0.10"))
-
-        # 从 .env 文件加载（如果存在）
-        self._load_env_file()
 
     def _load_env_file(self):
         """从 .env 文件加载环境变量"""

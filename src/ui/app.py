@@ -426,47 +426,223 @@ def show_backtest_page():
 
 def show_ai_assistant():
     """显示 AI 助手页面"""
+    import requests
+
     st.header("🤖 AI 助手")
 
-    st.info("🚧 AI 助手功能开发中...")
+    # 功能选择
+    ai_mode = st.radio(
+        "选择功能",
+        ["💬 对话交流", "📝 策略生成", "📊 指标解释"],
+        horizontal=True
+    )
 
-    st.markdown("""
-    ### 功能规划
+    # API 配置
+    api_base = f"http://localhost:{settings.API_PORT}"
 
-    **AI 助手将提供以下功能**:
+    # ========== 对话功能 ==========
+    if ai_mode == "💬 对话交流":
+        st.subheader("💬 与 AI 对话")
 
-    1. **策略生成** 📝
-       - 自然语言生成交易策略代码
-       - 策略模板推荐
+        # 初始化对话历史
+        if 'chat_history' not in st.session_state:
+            st.session_state['chat_history'] = []
 
-    2. **策略分析** 🔍
-       - 识别策略风险点
-       - 提供优化建议
+        # 显示对话历史
+        for msg in st.session_state['chat_history']:
+            with st.chat_message(msg['role']):
+                st.markdown(msg['content'])
 
-    3. **市场解读** 📊
-       - 解读市场新闻和事件
-       - 分析市场趋势
+        # 用户输入
+        user_input = st.chat_input("输入您的问题...")
 
-    4. **交易计划** 📋
-       - 生成每日交易计划
-       - 风控检查清单
+        if user_input:
+            # 显示用户消息
+            with st.chat_message("user"):
+                st.markdown(user_input)
 
-    ### 技术栈
+            # 添加到历史
+            st.session_state['chat_history'].append({
+                'role': 'user',
+                'content': user_input
+            })
 
-    - 智谱 AI GLM-4
-    - 本地 LLM (Ollama)
-    - OpenAI GPT (可选)
+            # 调用 API
+            try:
+                with st.spinner("思考中..."):
+                    response = requests.post(
+                        f"{api_base}/api/agent/chat",
+                        json={
+                            "message": user_input,
+                            "history": st.session_state['chat_history'][:-1]
+                        },
+                        timeout=60
+                    )
 
-    ### 当前状态
+                    if response.status_code == 200:
+                        result = response.json()
+                        ai_reply = result['response']
 
-    ⚠️ **智谱 AI API 余额不足**
+                        # 显示 AI 回复
+                        with st.chat_message("assistant"):
+                            st.markdown(ai_reply)
 
-    请访问 https://open.bigmodel.cn/ 充值或激活免费额度后再使用 AI 功能。
+                        # 添加到历史
+                        st.session_state['chat_history'].append({
+                            'role': 'assistant',
+                            'content': ai_reply
+                        })
 
-    ---
+                    else:
+                        st.error(f"API 调用失败: {response.status_code} - {response.text}")
 
-    **临时替代方案**: 使用内置策略模板，无需 AI 即可进行回测。
-    """)
+            except Exception as e:
+                st.error(f"请求失败: {e}")
+
+        # 清空历史
+        if st.button("清空对话"):
+            st.session_state['chat_history'] = []
+            st.rerun()
+
+    # ========== 策略生成 ==========
+    elif ai_mode == "📝 策略生成":
+        st.subheader("📝 AI 生成交易策略")
+
+        st.markdown("""
+        用自然语言描述您想要的策略，AI 将为您生成 Python 代码。
+
+        **示例**:
+        - "生成一个基于 RSI 指标的交易策略"
+        - "创建一个布林带突破策略"
+        - "实现一个量价配合策略"
+        """)
+
+        # 输入框
+        description = st.text_area(
+            "策略描述",
+            placeholder="例如：生成一个基于RSI指标的交易策略，RSI低于30买入，高于70卖出",
+            height=100
+        )
+
+        if st.button("🚀 生成策略", type="primary"):
+            if not description.strip():
+                st.warning("请输入策略描述")
+            else:
+                try:
+                    with st.spinner("AI 正在生成策略..."):
+                        response = requests.post(
+                            f"{api_base}/api/agent/generate-strategy",
+                            json={"description": description},
+                            timeout=60
+                        )
+
+                        if response.status_code == 200:
+                            result = response.json()
+                            code = result['code']
+                            model = result['model']
+
+                            st.success(f"✅ 策略生成成功（模型: {model}）")
+
+                            # 显示代码
+                            st.subheader("📄 生成的策略代码")
+
+                            st.code(code, language='python')
+
+                            # 复制按钮
+                            st.download_button(
+                                label="📥 下载策略代码",
+                                data=code,
+                                file_name="generated_strategy.py",
+                                mime="text/plain"
+                            )
+
+                            # 保存到 session
+                            st.session_state['generated_strategy'] = code
+
+                        else:
+                            st.error(f"生成失败: {response.status_code} - {response.text}")
+
+                except Exception as e:
+                    st.error(f"请求失败: {e}")
+
+        # 策略分析
+        if 'generated_strategy' in st.session_state:
+            st.subheader("🔍 策略风险分析")
+
+            if st.button("分析策略风险"):
+                try:
+                    with st.spinner("分析中..."):
+                        response = requests.post(
+                            f"{api_base}/api/agent/analyze-strategy",
+                            json={"code": st.session_state['generated_strategy']},
+                            timeout=60
+                        )
+
+                        if response.status_code == 200:
+                            result = response.json()
+                            analysis = result['analysis']
+
+                            st.markdown(analysis)
+
+                        else:
+                            st.error(f"分析失败: {response.status_code} - {response.text}")
+
+                except Exception as e:
+                    st.error(f"请求失败: {e}")
+
+    # ========== 指标解释 ==========
+    elif ai_mode == "📊 指标解释":
+        st.subheader("📊 技术指标解释")
+
+        st.markdown("输入技术指标名称，AI 将为您详细解释其原理和用法。")
+
+        # 常用指标
+        common_indicators = ["MACD", "RSI", "KDJ", "BOLL", "MA", "EMA", "ATR", "OBV"]
+
+        col1, col2 = st.columns([2, 1])
+
+        with col1:
+            indicator_name = st.text_input(
+                "指标名称",
+                placeholder="例如: MACD, RSI, KDJ"
+            )
+
+        with col2:
+            st.markdown("### 常用指标")
+            for ind in common_indicators:
+                if st.button(ind, key=f"ind_{ind}"):
+                    indicator_name = ind
+                    st.session_state['selected_indicator'] = ind
+
+        # 显示选中的指标
+        if 'selected_indicator' in st.session_state:
+            indicator_name = st.session_state['selected_indicator']
+
+        if st.button("🔍 查询指标", type="primary"):
+            if not indicator_name.strip():
+                st.warning("请输入指标名称")
+            else:
+                try:
+                    with st.spinner("查询中..."):
+                        response = requests.get(
+                            f"{api_base}/api/agent/indicator/{indicator_name}",
+                            timeout=60
+                        )
+
+                        if response.status_code == 200:
+                            result = response.json()
+                            explanation = result['explanation']
+                            model = result['model']
+
+                            st.success(f"✅ 查询成功（模型: {model}）")
+
+                            st.markdown(explanation)
+
+                        else:
+                            st.error(f"查询失败: {response.status_code} - {response.text}")
+
+                except Exception as e:
+                    st.error(f"请求失败: {e}")
 
 
 def show_settings():

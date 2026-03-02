@@ -9,7 +9,7 @@ numpy==1.26.2
 
 # Data Source
 tushare==1.3.6
-akshare==1.12.60
+akshare>=1.18.0
 
 # Backtest Engine
 backtrader==1.9.78.123

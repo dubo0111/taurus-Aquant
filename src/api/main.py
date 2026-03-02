@@ -18,6 +18,9 @@ from src.utils.logger import logger
 from src.data.data_service import DataService
 from src.backtest.backtest_engine import BacktestEngine, BacktestConfig, generate_double_ma_signal
 
+# 导入路由
+from .routers import agent as agent_router
+
 
 # 创建 FastAPI 应用
 app = FastAPI(
@@ -36,6 +39,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 注册路由
+app.include_router(agent_router.router)
 
 
 # ========== 请求/响应模型 ==========
